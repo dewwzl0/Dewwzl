@@ -1,0 +1,102 @@
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local tracked = {}
+
+-- Подсветка
+local function createHighlight(obj)
+    local h = Instance.new("Highlight")
+    h.FillColor = Color3.fromRGB(255, 0, 0)
+    h.OutlineColor = Color3.fromRGB(255, 255, 255)
+    h.FillTransparency = 0.5
+    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    h.Adornee = obj
+    h.Parent = obj
+    return h
+end
+
+-- Получение позиции
+local function getPosition(obj)
+    if obj:IsA("BasePart") then
+        return obj.Position
+    end
+
+    if obj:IsA("Model") then
+        local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+        if part then
+            return part.Position
+        end
+    end
+
+    return nil
+end
+
+-- Добавление объекта
+local function trackObject(obj)
+    if tracked[obj] then
+        return
+    end
+
+    if not (obj:IsA("Model") or obj:IsA("BasePart")) then
+        return
+    end
+
+    local pos = getPosition(obj)
+
+    if pos then
+        tracked[obj] = {
+            lastPos = pos,
+            highlight = nil
+        }
+    end
+end
+
+-- Проверяем уже существующие объекты
+for _, obj in ipairs(Workspace:GetDescendants()) do
+    trackObject(obj)
+end
+
+-- Проверяем новые объекты
+Workspace.DescendantAdded:Connect(function(obj)
+    task.wait(0.1)
+    trackObject(obj)
+end)
+
+-- Основной цикл
+RunService.Heartbeat:Connect(function()
+    for obj, data in pairs(tracked) do
+
+        if not obj.Parent then
+            if data.highlight then
+                data.highlight:Destroy()
+            end
+
+            tracked[obj] = nil
+            continue
+        end
+
+        local newPos = getPosition(obj)
+
+        if not newPos then
+            continue
+        end
+
+        -- Проверка изменения координат
+        if (newPos - data.lastPos).Magnitude > 0.05 then
+
+            if not data.highlight then
+                data.highlight = createHighlight(obj)
+            end
+
+            data.lastPos = newPos
+            data.lastMove = tick()
+
+        else
+            -- Удаление подсветки через 1 сек после остановки
+            if data.highlight and data.lastMove and tick() - data.lastMove > 1 then
+                data.highlight:Destroy()
+                data.highlight = nil
+            end
+        end
+    end
+end)
