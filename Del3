@@ -1,34 +1,18 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local pGui = player:WaitForChild("PlayerGui")
-local vim = game:GetService("VirtualInputManager")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local remote = ReplicatedStorage:FindFirstChild("RepairEvent", true) -- Ищем тот самый ивент
 
--- Функция авто-скиллчека
-local function handleSkillCheck(gui)
-    -- Мы ищем внутри появившегося GUI стрелку и зону
-    -- В "Районе" это может называться "Needle", "Arrow", "Bar"
-    local needle = gui:FindFirstChild("Needle", true) or gui:FindFirstChild("Arrow", true)
-    local zone = gui:FindFirstChild("Zone", true) or gui:FindFirstChild("White", true)
-
-    if needle and zone then
-        -- Как только стрелка заходит в зону (Rotation) — жмем!
-        if math.abs(needle.Rotation - zone.Rotation) < 10 then
-            vim:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-            task.wait(0.05)
-            vim:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-        end
-    end
+if remote then
+    print("РКН Наблюдает: Канал починки найден. Взлом начат.")
+    
+    -- Этот цикл будет ждать появления скиллчека и мгновенно слать "Успех"
+    -- ВАЖНО: В "Районе" может потребоваться передать аргумент (например, true)
+    
+    game:GetService("RunService").Heartbeat:Connect(function()
+        -- Мы просто спамим серверу, что мы попали. 
+        -- Добавь задержку, чтобы не забанили за слишком быструю починку.
+        remote:FireServer(true) 
+        task.wait(0.5) -- Чиним по чуть-чуть, как будто мы человек
+    end)
+else
+    warn("РКН Наблюдает: RepairEvent не найден в ReplicatedStorage!")
 end
-
--- Следим за появлением новых GUI у тебя в телефоне
-pGui.DescendantAdded:Connect(function(descendant)
-    -- Если появилось что-то похожее на скиллчек
-    if descendant.Name:lower():find("check") or descendant.Name:lower():find("minigame") then
-        game:GetService("RunService").RenderStepped:Connect(function()
-            if descendant.Visible then
-                handleSkillCheck(descendant)
-            end
-        end)
-    end
-end)
-
